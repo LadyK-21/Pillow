@@ -7,15 +7,16 @@ brew install \
     ghostscript \
     libimagequant \
     libjpeg \
-    libraqm \
     libtiff \
     little-cms2 \
     openjpeg \
     webp
+if [[ "$ImageOS" == "macos13" ]]; then
+    brew install --ignore-dependencies libraqm
+else
+    brew install libraqm
+fi
 export PKG_CONFIG_PATH="/usr/local/opt/openblas/lib/pkgconfig"
-
-# TODO Update condition when cffi supports 3.13
-if ! [[ "$GHA_PYTHON_VERSION" == "3.13" ]]; then PYTHONOPTIMIZE=0 python3 -m pip install cffi ; fi
 
 python3 -m pip install coverage
 python3 -m pip install defusedxml

@@ -497,7 +497,7 @@ def expand(
     color = _color(fill, image.mode)
     if image.palette:
         palette = ImagePalette.ImagePalette(palette=image.getpalette())
-        if isinstance(color, tuple):
+        if isinstance(color, tuple) and (len(color) == 3 or len(color) == 4):
             color = palette.getcolor(color)
     else:
         palette = None
@@ -698,7 +698,6 @@ def exif_transpose(image: Image.Image, *, in_place: bool = False) -> Image.Image
         transposed_image = image.transpose(method)
         if in_place:
             image.im = transposed_image.im
-            image.pyaccess = None
             image._size = transposed_image._size
         exif_image = image if in_place else transposed_image
 
@@ -709,14 +708,18 @@ def exif_transpose(image: Image.Image, *, in_place: bool = False) -> Image.Image
                 exif_image.info["exif"] = exif.tobytes()
             elif "Raw profile type exif" in exif_image.info:
                 exif_image.info["Raw profile type exif"] = exif.tobytes().hex()
-            elif "XML:com.adobe.xmp" in exif_image.info:
-                for pattern in (
-                    r'tiff:Orientation="([0-9])"',
-                    r"<tiff:Orientation>([0-9])</tiff:Orientation>",
-                ):
-                    exif_image.info["XML:com.adobe.xmp"] = re.sub(
-                        pattern, "", exif_image.info["XML:com.adobe.xmp"]
-                    )
+            for key in ("XML:com.adobe.xmp", "xmp"):
+                if key in exif_image.info:
+                    for pattern in (
+                        r'tiff:Orientation="([0-9])"',
+                        r"<tiff:Orientation>([0-9])</tiff:Orientation>",
+                    ):
+                        value = exif_image.info[key]
+                        exif_image.info[key] = (
+                            re.sub(pattern, "", value)
+                            if isinstance(value, str)
+                            else re.sub(pattern.encode(), b"", value)
+                        )
         if not in_place:
             return transposed_image
     elif not in_place:
